@@ -1,0 +1,12 @@
+# 自定义 feeds（覆盖 Lean 源码里的 feeds.conf.default）
+# 前 6 行保持 coolsnowwolf/lede@master 的默认源，后 2 行为 PassWall2
+src-git packages https://github.com/coolsnowwolf/packages.git
+src-git luci https://github.com/coolsnowwolf/luci.git;openwrt-25.12
+src-git routing https://github.com/coolsnowwolf/routing.git
+src-git telephony https://github.com/coolsnowwolf/telephony.git
+src-git helloworld https://github.com/fw876/helloworld.git
+src-git video https://github.com/coolsnowwolf/video
+
+# PassWall2（组织地址，旧的 xiaorouji/openwrt-passwall2 已 404）
+src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main
+src-git passwall2 https://github.com/Openwrt-Passwall/openwrt-passwall2.git;main
