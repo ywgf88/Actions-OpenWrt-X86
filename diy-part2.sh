@@ -10,14 +10,33 @@ set -e
 #    Lean 源码 include/version.mk 默认写的是 24.10.5，这里统一替换
 sed -i 's/24\.10\.5/25.12.2/g' include/version.mk
 
-# 2) IPv4-only：把 Kconfig 里 `config IPV6 / def_bool y` 改成默认 n
-#    这样 make defconfig 不会把 IPv6 重新打开
-sed -i '/^[[:space:]]*config IPV6$/,+1 s/def_bool y/def_bool n/' config/Config-build.in
+# 2) IPv4 单栈 —— 保留内核 CONFIG_IPV6=y（重要，不要再改成 n）
+#    config/Config-build.in 里 `config IPV6 / def_bool y` 是强制符号。
+#    Linux 6.18 把 nftables 的 reject 模块拆出 net/ipv6/netfilter/nft_reject_ipv6.ko，
+#    Lean 的 kmod-nft-core 在 FILES 里无条件列了它。若把内核 IPv6 关成 n，
+#    该 .ko 不会被编译，打包时必报：
+#      ERROR: module '.../net/ipv6/netfilter/nft_reject_ipv6.ko' is missing.
+#      make[3]: *** [modules/netfilter.mk:1195: .../kmod-nft-core_...ipk] Error 1
+#    所以「默认网络是 IPv4」放在运行时实现，见 3)/4)，编译期保持上游默认。
 
-# 3) IPv4-only：首次启动不生成 IPv6 地址段 / wan6 / ip6assign
+# 3) IPv4 单栈：首次启动不生成 wan6 / ip6assign / IPv6 DNS
 #    Lean 的 config_generate 全部靠 [ -e /proc/sys/net/ipv6 ] 判断
 sed -i 's|\[ -e /proc/sys/net/ipv6 \]|[ -e /proc/sys/net/ipv6-disabled ]|g' \
     package/base-files/files/bin/config_generate
+
+# 4) IPv4 单栈：运行时全局禁用 IPv6（内核模块仍编出来，但不激活任何接口）
+#    OpenWrt 的 /etc/sysctl.conf 明确说明 /etc/sysctl.d/*.conf 会按序加载，
+#    99- 排在 Lean 自带 10-default.conf 之后，可覆盖其中的 ipv6.forwarding=1。
+mkdir -p package/base-files/files/etc/sysctl.d
+cat > package/base-files/files/etc/sysctl.d/99-ipv4-only.conf <<'EOF'
+# IPv4-only: kernel IPv6 modules are built (needed by kmod-nft-core packaging),
+# but no interface is allowed to bring up an IPv6 address.
+net.ipv6.conf.all.disable_ipv6=1
+net.ipv6.conf.default.disable_ipv6=1
+net.ipv6.conf.lo.disable_ipv6=1
+net.ipv6.conf.all.forwarding=0
+net.ipv6.conf.default.forwarding=0
+EOF
 
 # 4) 默认主题设为 Argon（Lean 的 LuCI 集合默认依赖 bootstrap）
 if [ -d feeds/luci/collections ]; then
@@ -87,16 +106,50 @@ for f in ('package/luci-app-quickfile/Makefile',
           'package/luci-app-dockerman/Makefile',
           'package/luci-lib-docker/Makefile'):
     trim(f)
+
+# 8.3 Clashoo：核心包上游 DEPENDS 里有 yq、coreutils-nohup、coreutils-timeout、
+#     unzip、ip-full、一堆 kmod，在 Lean 25.12 的 metadata 扫描里被判为
+#     "which does not exist"，make defconfig 会把 clashoo 及依赖它的
+#     luci-app-clashoo 一起清掉（#2 日志 Step 9 报"未被选中"、
+#     编译队列里两个包都出现 0 次）。
+#     这里把 DEPENDS 精简到构建必需项，运行时工具改由 .config 显式选中。
+def set_depends(path, value):
+    f = pathlib.Path(path)
+    if not f.is_file():
+        print('  跳过 %s（文件不存在）' % path)
+        return
+    lines = f.read_text().splitlines(keepends=True)
+    out, i, hits = [], 0, 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.lstrip()
+        if stripped.startswith('DEPENDS:=') and not stripped.startswith('PKG_'):
+            hits += 1
+            indent = line[:len(line) - len(line.lstrip())]
+            while line.rstrip('\n').rstrip().endswith('\\') and i + 1 < len(lines):
+                i += 1
+                line = lines[i]
+            out.append(indent + 'DEPENDS:=' + value + '\n')
+            i += 1
+            continue
+        out.append(line)
+        i += 1
+    f.write_text(''.join(out))
+    print('  %s: DEPENDS 精简 %d 处 -> %s' % (path, hits, value))
+
+set_depends('package/clashoo/Makefile',
+            '$(GO_ARCH_DEPENDS) +ca-bundle +firewall4 +kmod-tun')
+# LuCI 页面只保留 luci-base，避免 HIDDEN 的 i18n 分包与核心包形成循环牵连
+set_depends('package/luci-app-clashoo/Makefile', '+luci-base')
 PY
 
-# 8.3 clashoo 的 LuCI 包硬依赖 HIDDEN 的 i18n 分包，25.12 下无法解析
-if [ -f package/luci-app-clashoo/Makefile ]; then
-  sed -i 's/ +luci-i18n-clashoo-zh-cn//g' package/luci-app-clashoo/Makefile
-fi
-
-echo "==== 版本 / IPv6 / 主题定制结果 ===="
+echo "==== 版本 / IPv4 单栈 / 主题定制结果 ===="
 grep -n '25.12.2' include/version.mk | head -5 || true
-sed -n '/config IPV6/,+2p' config/Config-build.in || true
+echo -n "CONFIG_IPV6 保持上游默认："
+sed -n '/config IPV6/,+1p' config/Config-build.in | tr '\n' ' ' || true
+echo
 echo -n "config_generate 已屏蔽的 IPv6 判断数："
 grep -c '/proc/sys/net/ipv6-disabled' package/base-files/files/bin/config_generate || true
+echo "运行时 IPv6 禁用配置："
+cat package/base-files/files/etc/sysctl.d/99-ipv4-only.conf
 echo "diy-part2 done."
