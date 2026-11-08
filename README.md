@@ -86,6 +86,26 @@ PAT 需要 `repo` + `workflow` 权限。脚本会：调用 fork API 创建 `Acti
 - `docker` 按「引擎 + 管理界面」整套安装：`docker`、`dockerd`、`luci-app-dockerman`、`luci-lib-docker`、`ttyd`；`luci-lib-ip` 由 Lean 的 LuCI feed 提供
 - workflow 已做的加固：补 `permissions`、编译失败不再误写 `status=success`、收尾步骤绑定编译成功状态、去掉模板里引用了未定义变量的 `UPLOAD_GOFILE` 行、去掉 `python2.7`（ubuntu-22.04 上装不上）、`upload-artifact` 固定 v4、调试期注释掉自动删除运行记录
 
+### 已修复：Linux 6.18 的 `kmod-crypto-sha1` 打包失败
+
+Lean master 的 `package/kernel/linux/modules/crypto.mk` 只把 `crypto/sha1.ko@ge6.18` 列入 `kmod-crypto-sha1` 的 `FILES`，漏了 6.18 新增的 `lib/crypto/libsha1.ko`。内核模块其实编出来了，但打包时依赖检查报：
+
+```
+Package kmod-crypto-sha1 is missing dependencies for the following libraries:
+libsha1.ko
+make[3]: *** [modules/crypto.mk:1055: .../kmod-crypto-sha1_6.18.62-1_x86_64.ipk] Error 1
+```
+
+`diy-part2.sh` 第 8 段按官方 `openwrt/main` 的写法把该模块补进 `FILES`。`Verify configuration` 里加了自检：补丁未生效会直接 `::error::` 快速失败，不用白等两小时编译。
+
+### 已修复：第三方 LuCI 包被 `make defconfig` 清掉
+
+Lean 25.12 下 `luci-compat` / `luci-nginx` / HIDDEN 的 i18n 分包这类硬依赖常无法满足，`defconfig` 会把整个 LuCI 包从 `.config` 移除（Step 9 显示"未被选中"）。`diy-part2.sh` 把 `luci-app-quickfile`、`luci-app-dockerman`、`luci-lib-docker` 的 `LUCI_DEPENDS` 精简为 `+luci-base`，并去掉 `luci-app-clashoo` 对 i18n 分包的硬依赖；后端程序由 `.config` 单独选中，页面与后端互不牵连。
+
+### quickfile 的降级开关
+
+`sbwml/luci-app-quickfile` 仓库里 `luci-app-quickfile/`（LuCI 页面）和 `quickfile/`（Rust/Axum 后端）是两个独立包，`diy-part1.sh` 已同时注入。后端需要 Rust 工具链与 `r2.cooluc.com` 源码包；若 Step 10/11 因它失败，删掉 `.config` 里的 `CONFIG_PACKAGE_quickfile=y` 一行即可降级，其余修复不受影响。
+
 ## 七、产物
 
 `bin/targets/x86/64/` 下的 `combined.img.gz` / `combined-efi.img.gz` / squashfs / ext4 镜像，打包在 Artifacts `OpenWrt_firmware_x86_64_<时间戳>`；编译成功时同步发到 Releases。
