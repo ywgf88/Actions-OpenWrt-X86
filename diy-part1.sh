@@ -22,9 +22,10 @@ git_diy() { git clone --depth 1 -b "$2" "$1" "$3"; }
 git_diy https://github.com/wukongdaily/luci-app-run.git master "$SRC/run"
 cp -rf "$SRC/run/luci-app-run" package/
 
-# 2) luci-app-quickfile —— 轻量级网页文件管理器
+# 2) luci-app-quickfile —— LuCI 页面 + quickfile 主程序（Rust/Axum）
+#    仓库里是两个独立包，只拷 LuCI 页面会因 +quickfile 依赖不满足被 defconfig 清掉
 git_diy https://github.com/sbwml/luci-app-quickfile.git main "$SRC/quickfile"
-cp -rf "$SRC/quickfile/luci-app-quickfile" package/
+cp -rf "$SRC/quickfile/luci-app-quickfile" "$SRC/quickfile/quickfile" package/
 
 # 3) luci-app-partexp —— 分区扩容
 git_diy https://github.com/sirpdboy/luci-app-partexp.git main "$SRC/partexp"
