@@ -85,6 +85,13 @@ jobs:
         grep '^CONFIG_VERSION_NUMBER' .config || true
         grep -q '^CONFIG_TARGET_x86_64=y' .config || { echo "::error::未选中 x86_64 目标"; exit 1; }
         grep -q '^# CONFIG_IPV6 is not set' .config || echo "::warning::IPv6 仍为开启状态，请检查 diy-part2.sh"
+        # 6.18 内核补丁自检：不用等两小时编译就能确认 libsha1 修复已生效
+        if grep -q 'lib/crypto/libsha1.ko@ge6.18' package/kernel/linux/modules/crypto.mk; then
+          echo "OK  crypto.mk libsha1 补丁已生效"
+        else
+          echo "::error::crypto.mk 未检测到 libsha1 补丁，kmod-crypto-sha1 打包必定失败"
+          exit 1
+        fi
         for p in luci-app-run luci-app-quickfile luci-theme-aurora luci-app-partexp \
                  luci-app-passwall2 luci-app-clashoo luci-app-dockerman luci-app-diskman \
                  luci-theme-argon luci-theme-vantage; do
@@ -92,6 +99,8 @@ jobs:
             echo "OK  $p"
           else
             echo "::warning::${p} 未被选中（包名或源码可能有问题）"
+            grep -E "^(# )?CONFIG_PACKAGE_${p}" .config \
+              || echo "  .config 中无该符号（包未被 metadata 识别）"
           fi
         done
 
