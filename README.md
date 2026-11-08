@@ -4,14 +4,14 @@
 
 ## 一、模板机制（教程要点）
 
-| 文件 | 作用 | 执行时机 |
-|---|---|---|
-| `.github/workflows/openwrt-builder.yml` | 定义环境变量与编译流水线 | 每次 Run workflow |
-| `feeds.conf.default` | 覆盖源码自带的 feeds 列表 | Clone 源码后、Update feeds 前 |
-| `diy-part1.sh` | 注入第三方软件包源码到 `package/` | Update feeds **之前** |
-| `diy-part2.sh` | 改源码默认值（主题、时区、IPv6、版本号） | Install feeds **之后**、载入 `.config` 之后 |
-| `.config` | `make defconfig` 的输入，决定目标架构与选包 | 编译前 |
-| `files/`（可选） | files 大法，直接覆盖进固件根文件系统 | 编译前 |
+| 文件                                      | 作用                             | 执行时机                                 |
+| --------------------------------------- | ------------------------------ | ------------------------------------ |
+| `.github/workflows/openwrt-builder.yml` | 定义环境变量与编译流水线                   | 每次 Run workflow                      |
+| `feeds.conf.default`                    | 覆盖源码自带的 feeds 列表               | Clone 源码后、Update feeds 前             |
+| `diy-part1.sh`                          | 注入第三方软件包源码到 `package/`         | Update feeds **之前**                  |
+| `diy-part2.sh`                          | 改源码默认值（主题、时区、IPv6、版本号）         | Install feeds **之后**、载入 `.config` 之后 |
+| `.config`                               | `make defconfig` 的输入，决定目标架构与选包 | 编译前                                  |
+| `files/`（可选）                            | files 大法，直接覆盖进固件根文件系统          | 编译前                                  |
 
 产物在 Actions 的 Artifacts，以及（编译成功时）Releases 页面。
 
@@ -36,18 +36,18 @@ Lean's OpenWrt (`coolsnowwolf/lede`) **只有 `master` 分支，没有 `v25.12.2
 
 ## 三、插件来源（均已实测可克隆）
 
-| 需求 | 包名 | 来源 | 引入方式 |
-|---|---|---|---|
-| Run 安装器 | `luci-app-run` | `wukongdaily/luci-app-run` (master) | diy-part1 clone → `package/` |
-| 文件管理 | `luci-app-quickfile` | `sbwml/luci-app-quickfile` (main) | diy-part1 clone → `package/` |
-| 极光主题 | `luci-theme-aurora` | `eamonxg/luci-theme-aurora` (master) | diy-part1 clone → `package/` |
-| 分区扩容 | `luci-app-partexp` | `sirpdboy/luci-app-partexp` (main) | diy-part1 clone → `package/` |
-| PassWall2 | `luci-app-passwall2` | `Openwrt-Passwall/openwrt-passwall2` + `openwrt-passwall-packages` (main) | `feeds.conf.default` 的 src-git |
-| Clashoo | `clashoo` / `luci-app-clashoo` | `kenzok8/openwrt-clashoo` (main) | diy-part1 clone → `package/` |
-| Docker | `luci-app-dockerman` / `luci-lib-docker` / `docker` / `dockerd` | `lisaac/...` + Lean packages feed | diy-part1 clone + feeds |
-| DiskMan | `luci-app-diskman` | `lisaac/luci-app-diskman` (master) | diy-part1 clone → `package/` |
-| Argon 主题 | `luci-theme-argon` | `coolsnowwolf/luci` (openwrt-25.12) | feed 自带，不额外 clone（避免同名冲突） |
-| Vantage 主题 | `luci-theme-vantage` | `anothaDev/luci-theme-vantage` (main) | diy-part1 clone → `package/` |
+| 需求         | 包名                                                              | 来源                                                                        | 引入方式                           |
+| ---------- | --------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------ |
+| Run 安装器    | `luci-app-run`                                                  | `wukongdaily/luci-app-run` (master)                                       | diy-part1 clone → `package/`   |
+| 文件管理       | `luci-app-quickfile`                                            | `sbwml/luci-app-quickfile` (main)                                         | diy-part1 clone → `package/`   |
+| 极光主题       | `luci-theme-aurora`                                             | `eamonxg/luci-theme-aurora` (master)                                      | diy-part1 clone → `package/`   |
+| 分区扩容       | `luci-app-partexp`                                              | `sirpdboy/luci-app-partexp` (main)                                        | diy-part1 clone → `package/`   |
+| PassWall2  | `luci-app-passwall2`                                            | `Openwrt-Passwall/openwrt-passwall2` + `openwrt-passwall-packages` (main) | `feeds.conf.default` 的 src-git |
+| Clashoo    | `clashoo` / `luci-app-clashoo`                                  | `kenzok8/openwrt-clashoo` (main)                                          | diy-part1 clone → `package/`   |
+| Docker     | `luci-app-dockerman` / `luci-lib-docker` / `docker` / `dockerd` | `lisaac/...` + Lean packages feed                                         | diy-part1 clone + feeds        |
+| DiskMan    | `luci-app-diskman`                                              | `lisaac/luci-app-diskman` (master)                                        | diy-part1 clone → `package/`   |
+| Argon 主题   | `luci-theme-argon`                                              | `coolsnowwolf/luci` (openwrt-25.12)                                       | feed 自带，不额外 clone（避免同名冲突）      |
+| Vantage 主题 | `luci-theme-vantage`                                            | `anothaDev/luci-theme-vantage` (main)                                     | diy-part1 clone → `package/`   |
 
 > 旧地址 `xiaorouji/openwrt-passwall2` 已 404，本配置用的是迁移后的组织地址。
 
@@ -100,7 +100,35 @@ make[3]: *** [modules/crypto.mk:1055: .../kmod-crypto-sha1_6.18.62-1_x86_64.ipk]
 
 ### 已修复：第三方 LuCI 包被 `make defconfig` 清掉
 
-Lean 25.12 下 `luci-compat` / `luci-nginx` / HIDDEN 的 i18n 分包这类硬依赖常无法满足，`defconfig` 会把整个 LuCI 包从 `.config` 移除（Step 9 显示"未被选中"）。`diy-part2.sh` 把 `luci-app-quickfile`、`luci-app-dockerman`、`luci-lib-docker` 的 `LUCI_DEPENDS` 精简为 `+luci-base`，并去掉 `luci-app-clashoo` 对 i18n 分包的硬依赖；后端程序由 `.config` 单独选中，页面与后端互不牵连。
+Lean 25.12 下 `luci-compat` / `luci-nginx` / HIDDEN 的 i18n 分包这类硬依赖常无法满足，`defconfig` 会把整个 LuCI 包从 `.config` 移除（Step 9 显
+
+示"未被选中"）。`diy-part2.sh` 把 `luci-app-quickfile`、`luci-app-dockerman`、`luci-lib-docker` 的 `LUCI_DEPENDS` 精简为 `+luci-base`，并去掉 `luci-app-clashoo` 对 i18n 分包的硬依赖；后端程序由 `.config` 单独选中，页面与后端互不牵连。
+
+### 已修复：关闭内核 IPv6 导致 `kmod-nft-core` 打包失败（#2）
+
+为做「IPv4 单栈」曾把 `config/Config-build.in` 的 `config IPV6 / def_bool y` 改成 `n`，并把 `.config` 写成 `# CONFIG_IPV6 is not set`。但 Linux 6.18 把 nftables 的 reject 模块拆到 `net/ipv6/netfilter/nft_reject_ipv6.ko`，Lean 的 `kmod-nft-core` 在 `FILES` 里无条件列了它。内核不编 IPv6 就缺这个 `.ko`，打包时必然报：
+
+```
+ERROR: module '.../net/ipv6/netfilter/nft_reject_ipv6.ko' is missing.
+make[3]: *** [modules/netfilter.mk:1195: .../kmod-nft-core_6.18.62-1_x86_64.ipk] Error 1
+```
+
+现在**编译期保持上游默认 `CONFIG_IPV6=y`**，「默认网络是 IPv4」改由运行时实现：
+
+1. `config_generate` 里的 `[ -e /proc/sys/net/ipv6 ]` 判断被屏蔽 → 首次启动不生成 `wan6`、`ip6assign`、IPv6 DNS；
+2. 新增 `/etc/sysctl.d/99-ipv4-only.conf` → `net.ipv6.conf.*.disable_ipv6=1`、转发置 0（排在 Lean 自带 `10-default.conf` 之后，覆盖其 `ipv6.forwarding=1`）。
+
+即：内核模块照常编出（打包不再报错），但任何接口都不会启用 IPv6。`Verify configuration` 会检查该 sysctl 文件是否存在。
+
+### Clashoo 依赖链与降级开关
+
+上游 `clashoo/Makefile` 的 `DEPENDS` 含 `yq`、`coreutils-nohup`、`coreutils-timeout`、`unzip`、`ip-full` 和一堆 kmod，在 Lean 25.12 的 metadata 扫描里被判为 "which does not exist"，`make defconfig` 会把 `clashoo` 和依赖它的 `luci-app-clashoo` 一起清掉（`#2` 的 Step 9 warning，两个包在编译队列里出现 0 次）。
+
+`diy-part2.sh` 把两个包的 `DEPENDS` 精简到构建必需项，运行时工具改由 `.config` 显式选中。如果 `clashoo` 核心（Go 编译 mihomo）导致下载或编译失败，删掉 `.config` 中 `# Clashoo` 段的 `CONFIG_PACKAGE_clashoo=y`、`CONFIG_PACKAGE_luci-app-clashoo=y` 及其下面几行工具包即可降级，其余修复不受影响。
+
+### 编译失败自动诊断
+
+`Compile the firmware` 现在会把 `make` 输出 tee 到日志：失败时打印磁盘空间、匹配到的错误行、日志末尾 60 行，并把错误行逐条写成公开的 `::error::` annotations。**即使拿不到完整日志，也能从运行页的 Annotations 直接看到根因**。
 
 ### quickfile 的降级开关
 
