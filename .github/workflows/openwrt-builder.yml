@@ -138,18 +138,6 @@ jobs:
           fi
         done
 
-    # 缓存两样东西：ccache（重复的 C/C++ 编译直接命中）和 dl（源码 tarball，省下载）
-    - name: Restore ccache and dl cache
-      id: cache-restore
-      uses: actions/cache@v4
-      with:
-        path: |
-          /workdir/openwrt/.ccache
-          /workdir/openwrt/dl
-        key: ccache-${{ github.repository }}-${{ hashFiles('openwrt/.config') }}-${{ github.run_id }}
-        restore-keys: |
-          ccache-${{ github.repository }}-${{ hashFiles('openwrt/.config') }}-
-          ccache-${{ github.repository }}-
     - name: Download package
       id: package
       run: |
@@ -160,15 +148,9 @@ jobs:
 
     - name: Compile the firmware
       id: compile
-      env:
-        CCACHE_DIR: /workdir/openwrt/.ccache
-        CCACHE_MAXSIZE: 3G
       run: |
         cd openwrt
         echo "$(nproc) thread compile"
-        ccache -M 3G >/dev/null 2>&1 || true
-        echo "==== ccache 编译前状态 ===="
-        ccache -s 2>/dev/null || echo "(ccache 不可用)"
         set +e
         make -j$(nproc) 2>&1 | tee /tmp/build-j.log
         rc=${PIPESTATUS[0]}
@@ -197,8 +179,6 @@ jobs:
           done
           exit "$rc"
         fi
-        echo "==== ccache 命中统计 ===="
-        ccache -s 2>/dev/null || true
         echo "status=success" >> $GITHUB_OUTPUT
         echo "DEVICE_NAME=_x86_64" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
